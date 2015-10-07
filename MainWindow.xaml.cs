@@ -24,7 +24,9 @@ namespace AlgLib.LsFit
         {
             //BiOptix.AlgLib.LsFit_Experiment1.Run_lsfit_d_nlf();
 
-            BiOptix.AlgLib.LsFit_Experiment2.Run_lsfit_5PL();
+            //BiOptix.AlgLib.LsFit_Experiment2.Run_lsfit_5PL();
+
+            BiOptix.AlgLib.LsFit_TimeSeriesKinetics.Run_lsfit_timeSeries();
 
             InitializeComponent();
         }
