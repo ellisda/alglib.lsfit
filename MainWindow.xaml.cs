@@ -22,8 +22,9 @@ namespace AlgLib.LsFit
     {
         public MainWindow()
         {
-            BiOptix.AlgLib.LsFit_Experiment1.Run_lsfit_d_nlf();
+            //BiOptix.AlgLib.LsFit_Experiment1.Run_lsfit_d_nlf();
 
+            BiOptix.AlgLib.LsFit_Experiment2.Run_lsfit_5PL();
 
             InitializeComponent();
         }
