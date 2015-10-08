@@ -28,13 +28,31 @@ namespace BiOptix.AlgLib
             double kd = c[1];
             double rmax = c[2];
 
+            //iPoint = (int)x[1];
+            //iCurve = iPoint / 241;
+
+            //int iCurveX = (int)x[1] / 241;
+            //iCurve = iCurveX;
+            //System.Diagnostics.Debug.Assert(iCurveX == iCurve, "new old should be same");
+            //double conc_m = curveConc_M[iCurve];
+            //System.Diagnostics.Debug.WriteLine("i={0}, curve_i={1}, curve_m={2:E3}", iPoint, iCurve, conc_m);
+
+
             double conc_m = curveConc_M[iCurve];
+            //double conc_m = x[2];
 
             double t = x[0];
+            getConcAndTimeFromSequenceNumber((int)x[0], ref t, ref conc_m);
+
             const double tR0 = 60; //time at which point we will predict R0 value for beginning of dissociation
             const double tDissocStart = 60; //time at which point we say the dissociation has been happening for 0 sec
             double tDissocDuration = t - tDissocStart;
 
+            //Console.WriteLine("Evaluating iPoint={0:0000} iCurve={1} X_sec={2:000.000}", iPoint, iCurve, t);
+            //Console.WriteLine("Evaluating t={3:000.000}, conc_M={4}", iPoint, iCurve, x[0], t, conc_m);
+
+            System.Diagnostics.Debug.Assert(t == x[1], "time are same");
+            System.Diagnostics.Debug.Assert(conc_m == x[2], "conc are same");
 
             if (t <= tR0)
             {
@@ -134,6 +152,9 @@ namespace BiOptix.AlgLib
             curveConc_M = _concentrations_M;
             totalPoints = y_RU.Length;
 
+
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+
             //
             // WITH A BAD INITIAL GUESS and WITHOUT the Restarts done in LogisticFit5, we get high error on all parameters
             //
@@ -145,16 +166,60 @@ namespace BiOptix.AlgLib
             alglib.lsfitfit(state, func, null, null);
             alglib.lsfitresults(state, out info, out c_OneToOne, out rep);
 
+            string c_string = string.Format("{0:0.####E+0}, {1:0.####E+0}, {2:0.####E+0}", c_OneToOne[0], c_OneToOne[1], c_OneToOne[2]);
+            string cErr_string = string.Format("{0:0.####E+0}, {1:0.####E+0}, {2:0.####E+0}", rep.errpar[0], rep.errpar[1], rep.errpar[2]);
+            Console.WriteLine("{0:00} iterations, {1:ss\\:fffffff} elapsed.", rep.iterationscount, timer.Elapsed);
+            Console.WriteLine("\tC\t={0}", c_string);
+            Console.WriteLine("\tErr\t={0}", cErr_string);
+
+            foreach (var cpi in Enumerable.Range(0, rep.covpar.GetUpperBound(0) + 1))
+            {
+                foreach (var cpj in Enumerable.Range(0, rep.covpar.GetUpperBound(1) + 1))
+                    Console.Write("({1},{2}) {0:0.####E+0}", rep.covpar[cpi, cpj], cpi, cpj);
+                Console.WriteLine();
+            }
             
+            //Get T Value (StudentDistribution) for 95% Confidence Interval
+            double p = 0.95;
+            int df = y_RU.Length - c_OneToOne.Length; //number of points minus number of parameters (ref: http://www.graphpad.com/guides/prism/6/curve-fitting/index.htm?reg_how_standard_errors_are_comput.htm)
+            var t = alglib.invstudenttdistribution(df, p);
+
+            //Calculate Confidence Interval
+            Console.WriteLine("\t TInverse({0}, {1:0.00}) = {2:0.####}", df, p, t);
+            var confIntervals = from i in Enumerable.Range(0, c_OneToOne.Length)
+                                select new double[]{c_OneToOne[i], c_OneToOne[i] - t*rep.errpar[i], c_OneToOne[i] + t*rep.errpar[i]};
+
+            //
+            foreach (var conf in confIntervals)
+                Console.WriteLine("\t {0:0.####E+0} - 95% Conf Interval [{1:0.####E+0}, {2:0.####E+0}]", conf[0], conf[1], conf[2]);
         }
 
+
+        /// <summary>
+        /// set the conc and time fields based on the sequence number of the data point
+        /// </summary>
+        /// <param name="iPoint"></param>
+        /// <param name="t"></param>
+        /// <param name="conc_M"></param>
+        private static void getConcAndTimeFromSequenceNumber(int iPoint, ref double t, ref double conc_M)
+        {
+            iPoint /= 3;
+            int iCurve = iPoint / 241;
+            conc_M = _concentrations_M[iCurve];
+            t = (iPoint % 241) / 2.0;
+        }
 
         private static double[,] getXMatrix()
         {
             var xVec = getXVector();
-            double[,] x = new double[xVec.Length, 1];
+            double[,] x = new double[xVec.Length, 3];
             for(int i = 0; i < xVec.Length; i++)
-                x[i, 0] = xVec[i];
+            {
+                //x[i, 0] = xVec[i];
+                x[i, 0] = 3 * i; //Store Sequence Number
+                x[i, 1] = xVec[i];
+                x[i, 2] = _concentrations_M[i / 241];
+            }
 
             //DESIGN REVIEW - Maybe I can add extra timing and concentration metadata as other x-dimensions (would be cleaner)
             return x;
@@ -200,6 +265,14 @@ namespace BiOptix.AlgLib
         private static double[] _conc4_RU = new double[] { 0.0831, 1.7871, 4.5041, 6.8541, 10.4541, 13.1391, 14.9221, 17.1481, 18.8941, 20.1871, 21.1611, 21.8461, 22.7881, 23.5231, 24.0921, 24.4521, 24.7561, 24.9151, 25.1241, 25.7121, 25.8381, 25.7561, 25.8821, 26.1491, 26.2811, 26.0201, 26.0781, 26.1461, 26.3621, 26.6521, 26.5501, 26.5431, 26.6051, 26.5841, 26.3131, 26.1041, 26.4221, 26.6311, 26.6121, 26.6251, 26.4231, 26.2511, 26.3261, 26.4361, 26.4471, 26.5411, 26.6661, 26.3791, 26.4641, 26.8741, 26.9051, 26.6481, 26.3261, 26.5481, 26.6191, 26.4661, 26.5071, 26.4161, 26.6301, 26.4931, 26.2451, 26.5221, 26.7221, 26.6691, 26.5321, 26.5161, 26.4121, 26.5321, 26.5221, 26.4411, 26.4361, 26.6481, 26.6881, 26.7251, 26.8761, 26.4491, 26.4401, 26.4061, 26.4711, 26.7271, 26.4591, 26.4271, 26.5081, 26.5391, 26.4931, 26.6081, 26.6561, 26.5821, 26.6951, 26.6971, 26.6271, 26.7631, 26.8271, 26.4241, 26.4701, 26.8341, 26.6281, 26.6071, 26.7141, 26.5531, 26.7541, 26.7551, 26.5841, 26.8801, 26.9301, 26.9811, 26.9031, 26.5611, 26.7921, 26.7781, 26.4111, 26.4741, 26.6851, 27.0601, 26.9511, 26.7331, 26.7401, 26.7391, 26.3981, 26.1191, 25.2061, 24.1096, 22.9856, 22.0316, 20.6946, 19.7866, 19.1096, 18.1766, 17.3556, 16.5086, 15.6026, 14.7876, 13.9066, 13.1756, 12.5576, 12.0586, 11.5926, 10.8706, 10.2986, 10.0646, 9.8396, 9.2216, 8.6756, 8.4006, 7.9856, 7.5016, 7.2966, 7.1236, 6.7366, 6.5056, 6.3366, 6.1836, 5.7406, 5.5466, 5.4076, 5.1056, 4.9526, 4.7596, 4.7156, 4.5476, 4.1466, 3.9956, 3.8046, 3.4606, 3.2586, 3.2456, 3.1716, 2.8096, 2.7696, 2.9636, 3.0186, 2.9246, 2.7076, 2.4136, 2.3136, 2.2376, 2.3216, 2.2636, 1.9656, 2.0166, 2.1596, 2.0426, 1.9856, 1.8286, 1.6096, 1.7626, 1.8986, 1.7926, 1.7416, 1.7536, 1.6216, 1.3396, 1.2776, 1.3876, 1.1916, 1.1566, 1.1126, 1.2596, 1.4186, 1.1656, 0.9446, 1.1916, 1.4746, 1.3376, 1.2086, 1.2886, 1.3906, 1.2216, 1.0626, 1.2456, 1.2226, 1.1866, 1.0636, 0.9106, 0.9156, 0.5036, 0.4656, 0.6096, 0.5616, 0.8346, 0.8766, 0.7646, 0.9646, 0.9426, 0.7106, 0.7106, 0.8726, 0.9836, 1.0116, 0.8396, 0.8016, 0.7326, 0.7646, 1.0836, 0.7926, 0.7826, 0.9046, 1.0176, 1.1456, 1.1116, 0.8706 };
         private static double[] _conc5_RU = new double[] { 2.373, 2.583, 2.207, 0.939, 0.722, 0.894, 1.091, 1.238, 1.202, 1.52, 1.698, 1.778, 2.178, 2.523, 2.909, 3.09, 3.033, 3.105, 3.256, 3.633, 3.808, 3.596, 3.526, 3.896, 4.191, 3.95, 3.831, 3.808, 3.842, 4.047, 4.087, 4.136, 4.247, 4.399, 4.201, 4.041, 4.34, 4.536, 4.423, 4.296, 4.209, 4.315, 4.372, 4.602, 4.773, 4.633, 4.656, 4.411, 4.449, 4.607, 4.619, 4.652, 4.499, 4.623, 4.799, 4.883, 4.984, 4.795, 4.875, 4.611, 4.476, 4.642, 4.866, 5.091, 5.017, 5.092, 4.912, 4.905, 4.96, 4.762, 4.661, 4.797, 4.958, 4.953, 4.82, 4.624, 4.705, 4.51, 4.603, 4.986, 4.928, 5.099, 5.192, 5.086, 5.064, 5.125, 5.157, 4.935, 4.91, 4.873, 4.768, 4.902, 5.161, 5.177, 5.01, 4.919, 4.935, 4.941, 4.91, 4.949, 5.134, 5.132, 5.042, 5.121, 5.198, 5.263, 5.244, 5.165, 5.281, 5.233, 5.067, 5.048, 5.102, 5.254, 4.81, 4.637, 4.938, 5.144, 4.542, 3.65, 4.139, 2.9454, 3.7424, 3.9584, 3.5494, 3.3644, 3.0804, 2.9254, 2.9284, 2.9854, 2.9654, 2.8254, 2.5784, 2.1914, 2.0604, 2.2074, 2.2114, 1.9974, 1.9594, 2.0854, 1.9704, 1.6744, 1.5984, 1.7224, 1.8624, 1.9114, 1.8744, 1.6764, 1.5784, 1.7564, 1.6614, 1.3774, 1.4784, 1.5174, 1.4164, 1.4544, 1.4694, 1.5444, 1.7024, 1.8084, 1.5404, 1.3094, 1.3564, 1.3374, 1.1794, 1.1584, 1.1244, 1.1194, 1.2104, 1.1554, 1.0594, 1.1154, 1.0224, 0.9584, 1.1874, 1.0044, 1.1064, 1.0864, 0.8604, 0.9294, 0.9384, 0.9204, 0.9784, 0.8224, 0.6104, 0.5804, 0.7584, 0.6934, 0.7114, 0.8674, 0.9434, 0.9414, 0.6884, 0.8364, 0.8064, 0.8184, 0.7854, 0.7504, 0.8524, 0.6944, 0.7894, 0.8904, 0.7254, 0.6544, 0.7414, 0.8804, 1.0614, 0.9034, 0.7334, 0.8214, 0.9394, 0.9204, 0.7824, 0.7574, 0.7344, 0.5274, 0.4324, 0.7374, 0.8544, 0.6704, 0.5694, 0.7204, 1.0444, 1.0324, 0.8194, 0.7854, 1.0804, 1.2214, 1.1094, 1.0204, 1.0934, 1.0794, 1.2184, 1.4424, 0.9564, 0.8054, 1.0274, 1.1074, 1.0484, 1.0104, 0.9624 };
 
+        //private double tInv(int k, double p)
+        //{
+
+        //    //http://forum.alglib.net/viewtopic.php?f=2&t=149
+        //    return alglib.invstudenttdistribution(k, p);
+
+        //    return -1* (alglib.invstudenttdistribution()
+        //}
 
 
         #region helper methods from Old Data Viewer
