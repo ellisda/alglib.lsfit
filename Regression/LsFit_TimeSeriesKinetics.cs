@@ -179,13 +179,14 @@ namespace BiOptix.AlgLib
                 Console.WriteLine();
             }
             
-            //Get T Value (StudentDistribution) for 95% Confidence Interval
-            double p = 0.95;
+            //Get Two-Tail T Value (StudentDistribution) for 95% Confidence Interval
+            //DESGIN NOTE: It seems that we're getting back one tail from the function below, so for two tail we have to ask for 97.5% condifdence interval (so we can use it as both plus and minus)
+            double p = 0.975;
             int df = y_RU.Length - c_OneToOne.Length; //number of points minus number of parameters (ref: http://www.graphpad.com/guides/prism/6/curve-fitting/index.htm?reg_how_standard_errors_are_comput.htm)
             var t = alglib.invstudenttdistribution(df, p);
 
             //Calculate Confidence Interval
-            Console.WriteLine("\t TInverse({0}, {1:0.00}) = {2:0.####}", df, p, t);
+            Console.WriteLine("\t TInverse({0}, {1:0.000}) = {2:0.####}", df, p, t);
             var confIntervals = from i in Enumerable.Range(0, c_OneToOne.Length)
                                 select new double[]{c_OneToOne[i], c_OneToOne[i] - t*rep.errpar[i], c_OneToOne[i] + t*rep.errpar[i]};
 
