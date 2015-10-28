@@ -39,7 +39,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="alglibnet2">
-      <HintPath>..\..\..\Users\David\Downloads\alglib-3.9.0.csharp.gpl\csharp\alglibnet2.dll</HintPath>
+      <HintPath>..\..\Lib\alglib-3.10.0.csharp.gpl\csharp\alglibnet2.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
