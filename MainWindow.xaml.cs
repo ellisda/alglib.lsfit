@@ -29,7 +29,9 @@ namespace AlgLib.LsFit
 
             //AlgLib.LsFit.ODE.Example_ODE.DoSomething();
 
-            AlgLib.LsFit.ODE.AssocRateEqn.DoSomething();
+            //AlgLib.LsFit.ODE.AssocRateEqn.DoSomething();
+
+            AlgLib.LsFit.ODE.MassTransportThreeRateEqn.DoSomething_TakeForever();
 
             BiOptix.AlgLib.LsFit_TimeSeriesKinetics.Run_lsfit_timeSeries();
 

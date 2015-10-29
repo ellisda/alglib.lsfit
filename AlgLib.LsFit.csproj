@@ -60,6 +60,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ODE\MassTransportThreeRateEqn.cs" />
     <Compile Include="ODE\AssocRateEqn.cs" />
     <Compile Include="ODE\Example_ODE.cs" />
     <Compile Include="Regression\LsFit_TimeSeriesKinetics.cs" />
