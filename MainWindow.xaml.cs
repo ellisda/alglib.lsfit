@@ -31,9 +31,11 @@ namespace AlgLib.LsFit
 
             //AlgLib.LsFit.ODE.AssocRateEqn.DoSomething();
 
-            AlgLib.LsFit.ODE.MassTransportThreeRateEqn.DoSomething_TakeForever();
+            //AlgLib.LsFit.ODE.MassTransportThreeRateEqn.DoSomething_TakeForever();
 
-            BiOptix.AlgLib.LsFit_TimeSeriesKinetics.Run_lsfit_timeSeries();
+            AlgLib.LsFit.ODE.MassTransportOneRateEqn.DoSomething();
+
+            //BiOptix.AlgLib.LsFit_TimeSeriesKinetics.Run_lsfit_timeSeries();
 
             InitializeComponent();
         }
